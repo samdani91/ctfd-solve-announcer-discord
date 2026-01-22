@@ -24,13 +24,11 @@ Build the docker image
 docker build --tag bot .
 ```
 
-Run a container using the created image and provide the environment variables
+Create a .env file (see .env in the repo) and then run the container without passing env vars
 
 ```bash
 docker run -d --name ctfd-solve-announcer-discord \
-    -e WEBHOOK_URL=<YOUR_WEBHOOK_URL> \
-    -e CTFD_URL=<YOUR_CTFD_APP_URL> \
-    -e CTFD_API_KEY=<YOUR_CTFD_API_KEY>
+    bot
 ```
 
 Enjoy!

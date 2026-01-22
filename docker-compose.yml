@@ -1,0 +1,15 @@
+services:
+  ctfd-solve-announcer-discord:
+    build:
+      context: .
+    image: ctfd-solve-announcer-discord
+    container_name: ctfd-solve-announcer-discord
+    env_file:
+      - .env
+    restart: unless-stopped
+    networks:
+      - ctfd_default
+
+networks:
+  ctfd_default:
+    external: true

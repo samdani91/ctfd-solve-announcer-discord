@@ -9,6 +9,7 @@ use serenity::http::Http;
 use serenity::model::webhook::Webhook;
 
 use clap::Parser;
+use dotenvy::dotenv;
 use rusqlite::Connection;
 
 /// A Discord webhook bot to announce CTFd solves
@@ -16,27 +17,27 @@ use rusqlite::Connection;
 #[command(author, version, about, long_about = None)]
 struct Args {
     /// Discord Webhook URL
-    #[arg(short, long)]
+    #[arg(short, long, env = "WEBHOOK_URL")]
     webhook_url: String,
 
     /// CTFd URL
-    #[arg(long, short = 'c')]
+    #[arg(long, short = 'c', env = "CTFD_URL")]
     ctfd_url: String,
 
     /// CTFd API Key
-    #[arg(long, short = 'a')]
+    #[arg(long, short = 'a', env = "CTFD_API_KEY")]
     ctfd_api_key: String,
 
     /// Whether to only announce first bloods
-    #[arg(long, default_value = "true")]
+    #[arg(long, env = "ANNOUNCE_FIRST_BLOOD_ONLY", default_value = "true")]
     announce_first_blood_only: bool,
 
     /// Whether to skip announcing existing solves
-    #[arg(short, long, default_value = "true")]
+    #[arg(short, long, env = "SKIP_ANNOUNCING_EXISTING_SOLVES", default_value = "true")]
     skip_announcing_existing_solves: bool,
 
     /// Refresh interval in seconds
-    #[arg(short, long, default_value = "5")]
+    #[arg(short, long, env = "REFRESH_INTERVAL_SECONDS", default_value = "5")]
     refresh_interval_seconds: u64,
 }
 
@@ -88,7 +89,19 @@ async fn announce_solves(
                 .unwrap_or(&Vec::new())
                 .contains(&solver)
             {
-                println!("Announcing solve for {} by {}", challenge.name, solver.name);
+                let solver_log = if let Some(team_name) = solver.team_name.as_ref().filter(|name| !name.is_empty()) {
+                    format!("{} (Team {})", solver.name, team_name)
+                } else {
+                    solver.name.clone()
+                };
+
+                let solver_display = if let Some(team_name) = solver.team_name.as_ref().filter(|name| !name.is_empty()) {
+                    format!("**{}** (Team **{}**)", solver.name, team_name)
+                } else {
+                    format!("**{}**", solver.name)
+                };
+
+                println!("Announcing solve for {} by {}", challenge.name, solver_log);
 
                 // Send a message to the webhook
                 webhook
@@ -96,11 +109,11 @@ async fn announce_solves(
                         // If this is the first solve
                         if !announced_solves.contains_key(&challenge.id) {
                             w.content(format!(
-                                "First blood for **{}** goes to **{}**! :knife::drop_of_blood:",
-                                challenge.name, solver.name
+                                ":knife::drop_of_blood: First blood for **{}** goes to {}!",
+                                challenge.name, solver_display
                             ))
                         } else {
-                            w.content(format!("{} just solved {}! :tada:", solver.name, challenge.name))
+                            w.content(format!("{} just solved **{}**! :tada:", solver_display, challenge.name))
                         }
                     })
                     .await
@@ -219,6 +232,8 @@ async fn announce_top_10_overtakes(
 async fn main() {
     println!("Starting CTFd Discord Solve Announcer Bot");
 
+    dotenv().ok();
+
     let args = Args::parse();
 
     let http = Http::new("");
@@ -253,6 +268,8 @@ async fn main() {
                 ChallengeSolver {
                     account_id: row.get::<_, i64>(1).unwrap(),
                     name: "".to_string(),
+                    team_id: None,
+                    team_name: None,
                 },
             ))
         })

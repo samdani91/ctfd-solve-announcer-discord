@@ -25,6 +25,10 @@ pub struct Challenge {
 pub struct ChallengeSolver {
     pub account_id: i64,
     pub name: String,
+    #[serde(default)]
+    pub team_id: Option<i64>,
+    #[serde(default)]
+    pub team_name: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
